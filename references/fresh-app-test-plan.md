@@ -163,6 +163,10 @@ xcrun simctl io $UDID screenshot --display=1 --mask=alpha cover-mask.png   # cor
 # Transitions: ONE display per pass. simctl records one display at a time; a second
 # recordVideo while one runs exits 16 "Host recording is already in progress"
 # (measured 2026-10-23, Xcode 27.1). Run the same transition twice, once per display.
+# CAUTION: --display=3 (inner) saved ONE frame in two takes on Xcode 27.1, while
+# --display=1 recorded normally. Check each file with:
+#   ffprobe -v error -count_frames -select_streams v:0 -show_entries stream=nb_read_frames <file>
+# If the inner take has 1 frame, screen-record the Device Hub window while it is on screen.
 # simctl writes "Recording started" to stderr after the first frame (simctl help io),
 # so redirect stderr and poll it.
 for D in 1 3; do                       # 1 = cover, 3 = inner
