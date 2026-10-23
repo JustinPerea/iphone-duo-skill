@@ -783,9 +783,9 @@ Areas: [Lifecycle and scenes](#lifecycle-and-scenes) · [Layout](#layout) · [Ba
 - **Case:** Apple says test transitions, not only poses. A single-display recording goes black when the app moves to the other display (inferred from captures, not measured on video).
 - **Breaks:** jumps and flashes during fold or unfold are never recorded.
 - **Detect:** no video in the Duo steps, or `recordVideo` with one `--display`.
-- **Fix:** two `recordVideo` processes (cover and inner), wait for "Recording started" on stderr from each before pressing, stop each by its own PID with SIGINT; or record the Device Hub window.
+- **Fix:** record the transition once per display (`--display=1`, then repeat with `--display=3`): simctl records one display at a time, and a second `recordVideo` while one runs exits 16, "Host recording is already in progress" (measured 2026-10-23, Xcode 27.1; whether it also blocks a recording on a different simulator is untested). Wait for "Recording started" on stderr before pressing; stop by the captured PID with SIGINT. For both displays in one take, record the Device Hub window.
 - **Verify:** both files show the hand-off with no mispositioned frames.
-- **Source:** `simctl io` help; LAB0917 43:40; LAB0916 42:38.
+- **Source:** `simctl io` help; LAB0917 43:40; LAB0916 42:38; the one-at-a-time limit measured with two concurrent `recordVideo` calls on one Duo simulator (2026-10-23).
 
 ### E-TEST-19. CI cannot pose the Duo `[General]` (T04)
 - **Case:** hosted runners have no Device Hub GUI, no AX or Screen Recording grants, maybe no 27.1 runtime. (No Apple statement; inferred from there being no pose API. Runner images unchecked.)

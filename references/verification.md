@@ -74,7 +74,7 @@ Also, per Apple and the sweeps:
 | Bold Text, Button Shapes (Settings > Accessibility > Display & Text Size), Increase Contrast and Dark Mode (simctl ui; restore after) | Cover text still fits at 466 pt; custom chrome shows edges; contrast holds behind the column (E-A11Y-6) |
 | Voice Control / Switch Control (device) | Every column item has a name; scanning reaches the column and both panes (E-A11Y-5) |
 
-Pose transitions, not just poses: record them on BOTH displays (two `recordVideo` processes, `--display=1` and `--display=3`; wait for "Recording started" on each stderr before pressing; stop each by its own PID with SIGINT) (E-TEST-18).
+Pose transitions, not just poses: record them on BOTH displays. simctl records only one display at a time: a second `recordVideo` while one runs exits 16 with "Host recording is already in progress" (measured 2026-10-23, Xcode 27.1). So run the transition once per display (`--display=1`, then repeat it with `--display=3`), or record the Device Hub window to get both in one take. Wait for "Recording started" on stderr before pressing; stop the recording by its own PID with SIGINT (E-TEST-18).
 
 Fold transitions: with every sheet, popover, panel, form, keyboard, in-progress flow and playback open, fold and unfold. Nothing may lose state, and nothing may stay positioned from the other screen's frames.
 

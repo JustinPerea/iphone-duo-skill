@@ -106,7 +106,7 @@ Then, per critical flow (sign-in, onboarding, main list and detail, editor or co
 3. Partially Open (pose 4), then back to Open.
 4. Fold to Closed. Check again.
 5. Repeat 1 to 4 starting from the turned poses (2 to 5 or 6).
-6. Record both displays during at least one transition per flow (two `recordVideo` processes, section 6).
+6. Record both displays during at least one transition per flow (one display per pass, since simctl records one at a time; section 6).
 
 ### Conditions, once per release per flow
 
@@ -160,18 +160,19 @@ xcrun simctl io $UDID screenshot --display=1 cover.png            # cover
 xcrun simctl io $UDID screenshot --display=3 inner.png            # inner (rotated 2853 x 2007 held wide)
 xcrun simctl io $UDID screenshot --display=1 --mask=alpha cover-mask.png   # corner checks
 
-# Transitions: one recordVideo process per display. simctl writes "Recording started"
-# to stderr after the first frame (simctl help io), so redirect stderr and poll it.
-xcrun simctl io $UDID recordVideo --display=1 --mask=black cover.mov 2>cover.err & P1=$!
-xcrun simctl io $UDID recordVideo --display=3 --mask=black inner.mov 2>inner.err & P2=$!
-for i in $(seq 50); do
-  grep -qF 'Recording started' cover.err && grep -qF 'Recording started' inner.err && break
-  sleep 0.2
+# Transitions: ONE display per pass. simctl records one display at a time; a second
+# recordVideo while one runs exits 16 "Host recording is already in progress"
+# (measured 2026-10-23, Xcode 27.1). Run the same transition twice, once per display.
+# simctl writes "Recording started" to stderr after the first frame (simctl help io),
+# so redirect stderr and poll it.
+for D in 1 3; do                       # 1 = cover, 3 = inner
+  xcrun simctl io $UDID recordVideo --display=$D --mask=black transition-d$D.mov 2>rec-d$D.err & P=$!
+  for i in $(seq 50); do grep -qF 'Recording started' rec-d$D.err && break; sleep 0.2; done
+  grep -qF 'Recording started' rec-d$D.err || { echo "RECORDING DID NOT START (display $D)"; cat rec-d$D.err; }
+  # ... put the app back in the starting pose, then press the transition in Device Hub ...
+  kill -INT $P; wait $P                # SIGINT, only the PID captured above; simctl finalizes the file
 done
-grep -qF 'Recording started' cover.err && grep -qF 'Recording started' inner.err || echo "RECORDING DID NOT START"
-# ... press the pose in Device Hub (by hand or with your own script) ...
-kill -INT $P1 $P2      # SIGINT, only the PIDs captured above; simctl finalizes the file and exits
-wait $P1 $P2
+# For both displays in one take, screen-record the Device Hub window instead.
 
 # Control iPhone (single display):
 xcrun simctl io <control udid> screenshot ctl.png
