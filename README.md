@@ -16,6 +16,12 @@
   </p>
 </p>
 
+<p align="center">
+  <a href="https://justinperea.com/lab/iphone-duo-skill"><img src="assets/launch-video-poster.png" alt="Launch video: an iPhone app becomes ready for iPhone Duo. Click to watch." width="720"></a>
+  <br>
+  <sub>Watch the 31-second launch video</sub>
+</p>
+
 ---
 
 A [Claude Code](https://claude.com/claude-code) skill that converts, audits and tests an iPhone app for iPhone Duo. It reads your project and finds the code that breaks on a foldable: `UIScreen.main`, iPad-style size-class branches, hand-built bars, and layouts that swap containers and lose state on a fold. It fixes them in a set order, then has you check each changed screen in six simulator poses. Posing needs Device Hub on a Mac.
