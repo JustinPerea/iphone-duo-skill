@@ -9,6 +9,7 @@ Every `xcrun simctl` and `xcodebuild` form below was checked against `xcrun simc
 ## 1. Preflight
 
 1. **Toolchain.** `xcodebuild -version` shows Xcode 27.1, build 27A9275 or later. With several Xcodes installed, `xcode-select -p` points at 27.1, and every command below uses that path.
+   Plan for getting it before the trial starts. A Mac App Store Xcode updates only from the App Store's Update button (there is no command-line installer, so someone at the keyboard clicks it); a developer.apple.com download needs the account owner to sign in. Xcode 27.1 then lacks the iOS 27.1 simulator runtime: `xcodebuild -downloadPlatform iOS` fetched it (7.85 GB, build 24A94425), and the iPhone Duo device type appears only once it is installed (trial on a second SwiftUI app, 2026-10-24, Xcode 27.1 27A9275, iOS 27.1 runtime 24A94425). The iOS 27.0 runtime stays installed for the control run.
 2. **Runtimes and ids.** `xcrun simctl list runtimes` shows iOS 27.1 and iOS 27.0, each line ending in its runtime id. Get the two ids you need before creating anything:
    ```bash
    xcrun simctl list runtimes | grep -F 'iOS 27.1'        # ... - com.apple.CoreSimulator.SimRuntime.iOS-27-1

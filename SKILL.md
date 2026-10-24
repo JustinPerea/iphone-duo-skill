@@ -31,6 +31,7 @@ Code marked **(shipped)** compiled and ran in Mitamaton under Xcode 27.1. **(not
 - Building with the iOS 27 SDK requires the UIScene lifecycle, or the app will not launch [TN3187]. SwiftUI `App` apps already have it; old UIKit, React Native/Expo, older Flutter and Unity hosts may not (E-LIFE-1).
 - `UIScreen.main` is deprecated since iOS 26.0 (reference page; TT461 still says "will be"). On the open Duo it returns the cover.
 - Duo APIs (`reservedRegions`, `axisBehavior`, `ArrangementView`, `UIHingeInteraction`) are iOS 27.1 SDK symbols: Xcode 27.0 fails to compile them (exit 65). Build with Xcode 27.1 final (27A9275, numbered in Apple's seed range) and gate each call with `#available(iOS 27.1, *)`. Never raise the deployment target to avoid the gates (E-STORE-11).
+- `#available` does not help a 27.0 build, and neither does `#if compiler`: Xcode 27.1 ships the same Swift compiler as 27.0 (swiftlang-6.4.0.34.1 in both, measured). Move CI images, Xcode Cloud workflows and teammates to 27.1 before the first commit that calls a Duo API, or that commit breaks every 27.0 build.
 - Simulator: the iOS 27.1 runtime's only device type is iPhone Duo (model id `iPhone19,4`, Touch ID, not Face ID). A plain-iPhone control run must use iOS 27.0, which only runs your fallback branches.
 - Tool ladder (Apple's): system containers and presentations, then `ArrangementView` / `UIArrangementViewController`, then `reservedRegions`, then the hinge (`onHingeChange`, `UIHingeInteraction`) only for angle-driven features. Never lay out from the hinge angle.
 - Multiple instances: an app that supports multiple windows on iPad runs two instances side by side on the Duo; both are foreground active and share `@AppStorage`. The cover cannot create new windows.
@@ -42,6 +43,8 @@ Step 0, inventory. List every target (`xcodebuild -list`; `rg -l NSExtensionPoin
 
 Do NOT add `--type swift`: it returns zero on Objective-C, cross-platform and web code and looks like a pass (E-TEST-14). Fixed-string search for literal needles; count before reading; never pipe an absence check through `head`.
 
+Check the tool before trusting a zero. On a Mac without ripgrep, a script that counted hits with `$(rg ... | wc -l)` printed 0 for all of the greps below: a clean audit that never ran (trial on a second SwiftUI app, 2026-10-24, Xcode 27.1 27A9275, iOS 27.1 runtime 24A94425). Start any audit script with `set -o pipefail` and `command -v rg >/dev/null || { echo 'install ripgrep: brew install ripgrep'; exit 1; }`, and treat a non-zero exit other than 1 (no match) as a failed search.
+
 ```bash
 rg -n -e 'UIScreen\.main' -e 'mainScreen\]' -e 'UIScreen\.screens' -e '\.nativeBounds' .
 rg -n -e 'userInterfaceIdiom' -e 'UIUserInterfaceIdiomPad' -e '\bisPad\b' -e 'NavigationView' -e 'horizontalSizeClass' .
@@ -49,6 +52,8 @@ rg -n -e 'supportedInterfaceOrientations' -e 'UIInterfaceOrientation' -e 'reques
 rg -n -e 'utsname' -e 'iPhone[0-9]+,[0-9]' -e 'height *[<>=]=? *[5-9][0-9]{2}' -e 'isSmallScreen' -e 'Face ID' -e '\.faceID' .
 rg -n -e '\.frame\(width: *[0-9]' -e 'padding\(\.(leading|trailing|horizontal), *[0-9]' -e 'width \* 0\.[0-9]' .
 rg -n -e 'tabBarHeight' -e 'barHeight' -e 'safeAreaInset\(edge: *\.(top|bottom)' -e 'safeAreaBar' -e '\.clipped\(\)' .
+rg -n -e 'padding\(\.bottom, *[0-9]{2,}' -e 'overlay\(alignment: *\.bottom' .        # floating rows and toasts sized for a tab bar (E-BARS-6)
+rg -n -e 'toolbar\(\.hidden, *for: *\.navigationBar' -e 'navigationBarHidden\(true' -e 'toolbarVisibility\(\.hidden' .   # hand-drawn headers (E-BARS-12)
 rg -n -e '\.sheet\(' -e 'fullScreenCover' -e 'popover' -e 'actionSheet' -e 'UIActivityViewController' -e 'confirmationDialog' .
 rg -n -e 'Environment\(\\\.dismiss\)' -e 'ArrangementView' -e 'NavigationSplitView' -e 'onDismiss:' .
 rg -n -e 'ToolbarItem' -e 'UIToolbar' -e 'UITabBar' -e 'UINavigationBar\(' -e 'TabView' -e 'inputAccessoryView' .
@@ -74,7 +79,7 @@ find . "$DD/SourcePackages" \( -name '*.xcframework' -o -name '*.framework' -o -
 
 Also check binaries (`nm -u <binary> | grep -c UIScreen`), storyboards and asset catalogs for regular-width variants (`rg -c 'widthClass="regular"' -g '*.storyboard' -g '*.xib'`), and after archiving, the linked SDK in the app and every appex (`plutil -p .../Info.plist | grep -E 'DTSDKName|DTXcodeBuild|MinimumOSVersion'`).
 
-What hits mean: `UIScreen.main` geometry is the cover (T1). Idiom and size-class branches take the iPad path on a phone. Fixed widths miss asymmetric insets. Hand-built bars (and every React Native/Flutter-drawn bar) never go vertical. Bar-height constants are wrong when the nav bar is 0 pt or the tab bar is in the column. Branch-swapped containers lose state on fold. Global window lookups grab the other instance. Keyboard notification frames are in screen space. `.global` frames captured once go stale on fold. Full lookup table per hit: `references/edge-cases.md`.
+What hits mean: `UIScreen.main` geometry is the cover (T1). Idiom and size-class branches take the iPad path on a phone. Fixed widths miss asymmetric insets. Hand-built bars (and every React Native/Flutter-drawn bar) never go vertical. Bar-height constants are wrong when the nav bar is 0 pt or the tab bar is in the column; so is a bottom offset like `.padding(.bottom, 64)` that put a toast "just above the tab bar". A hidden navigation bar with a drawn header means the header's buttons never reach the column. Branch-swapped containers lose state on fold. Global window lookups grab the other instance. Keyboard notification frames are in screen space. `.global` frames captured once go stale on fold. Full lookup table per hit: `references/edge-cases.md`.
 
 ## 2. Archetype routing
 
