@@ -5,7 +5,7 @@
   </p>
   <p align="center">
     <a href="https://github.com/JustinPerea/iphone-duo-skill/blob/main/LICENSE"><img src="https://img.shields.io/badge/license-MIT-blue.svg" alt="MIT License"></a>
-    <img src="https://img.shields.io/badge/edge_cases-118-brightgreen.svg" alt="118 Edge Cases">
+    <img src="https://img.shields.io/badge/edge_cases-119-brightgreen.svg" alt="119 Edge Cases">
     <a href="https://claude.com/claude-code"><img src="https://img.shields.io/badge/works_with-Claude_Code-cc785c.svg" alt="Works with Claude Code"></a>
   </p>
   <p align="center">
@@ -66,7 +66,7 @@ iphone-duo-converter/
 ├── SKILL.md                         # Quick audit, archetype routing, conversion playbook, 15 traps, verification, release
 └── references/
     ├── apple-guidance.md            # Apple's HIG, docs, six tech talks, four group labs and store pages, sourced
-    ├── edge-cases.md                # 118 edge cases, each with case, breaks, detect, fix, verify, source
+    ├── edge-cases.md                # 119 edge cases, each with case, breaks, detect, fix, verify, source
     ├── verification.md              # Simulator, Device Hub, captures, UI tests, CI and device checks
     ├── fresh-app-test-plan.md       # Step-by-step trial on an unfamiliar app, with a results template
     └── mitamaton-case-study.md      # Worked example: what broke in a shipping SwiftUI app, and the fixes
@@ -78,7 +78,7 @@ Edge cases by area:
 |---|---|---|
 | Lifecycle and scenes | 16 | Missing UIScene lifecycle, `UIScreen.main`, two app instances, scene phase |
 | Layout | 14 | Regular width is not iPad, screen-size buckets, paywalls held tall, book-pose readers |
-| Bars and chrome | 11 | Side-column placement, empty `safeAreaBar`, bottom rows under the column, toasts |
+| Bars and chrome | 12 | Side-column placement, empty `safeAreaBar`, bottom rows under the column, toasts |
 | Presentation and in-tree panes | 11 | Detail beside list, `dismiss()` that does nothing, panels across a fold |
 | Input | 5 | Keyboard frames, accessory bars, focus and drafts through a fold, drag and drop |
 | Accessibility | 6 | VoiceOver across the fold, Dynamic Type caps, Voice Control on column items |

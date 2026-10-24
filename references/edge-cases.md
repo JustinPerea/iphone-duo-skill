@@ -316,6 +316,7 @@ Areas: [Lifecycle and scenes](#lifecycle-and-scenes) · [Layout](#layout) · [Ba
 - **Breaks:** plain iPhones get a pinned 44 pt header (the paywall lost viewport) and Close moves from top right to top left; "iPhone unchanged" claims are false and a Duo-only decision is silently widened.
 - **Detect:** diff against the pre-Duo base and capture the screen on a plain iPhone; `rg -n -e 'UINavigationBar\(' -e 'safeAreaInset\(edge: \.top'` in changed files.
 - **Fix:** gate the pinned bar to layouts with a side column or split (`toolbarVerticalEdge != nil`, or a fold region). Where a change must reach every iPhone, name it as a broadening and get the product owner's sign-off.
+- **Also:** giving toolbar items a symbol (section 3 step 3) is a broadening too: on iOS 26 and later a toolbar button with a symbol shows only the icon on every iPhone. Gate `.labelStyle(.titleOnly)` on `toolbarVerticalEdge == nil` to keep the text there (trial, 2026-10-24).
 - **Verify:** before/after on a plain and the smallest iPhone: identical pixels for gated cases.
 - **Source:** case study sections 13 and 16.
 
@@ -340,6 +341,7 @@ Areas: [Lifecycle and scenes](#lifecycle-and-scenes) · [Layout](#layout) · [Ba
 - **Breaks:** on the cover the status bar, Dynamic Island and bars sit in the side column (HIG), so content runs to the top edge with little top inset; a top toast spans under the column, the outer camera corner or the Island, and the Island grows while a Live Activity shows (E-LIFE-9). Turned (Rotate Right) the column is on the other side. Libraries that add the toast to the key window also land in the other instance's window (E-LIFE-3). The exact top inset on the cover and the overlap are (unverified, test it); E-BARS covers headers, not transient overlays.
 - **Detect:** `rg -n -i -e 'toast' -e 'snackbar' -e 'banner' -e 'SwiftMessages' -e 'NotificationBanner' -e 'AlertToast' -e 'SPIndicator' -e 'overlay\(alignment: *\.top' -e 'keyWindow\?*\.addSubview'`; package manifests for toast libraries.
 - **Fix:** inset the toast horizontally by both side safe-area insets, keep it off `.occlusion` regions (read `reservedRegions`, kind occlusion), and on the cover prefer a bottom or inline placement; attach it to the presenting view's window.
+- **Bottom toasts:** an Undo snackbar placed with `.padding(.bottom, 64)` "just above the tab bar" floats 64 pt over nothing once the tab bar is in the column, and full width it runs across the fold held wide (trial, 2026-10-24). Drop the offset where `toolbarVerticalEdge` is non-nil, and keep the toast to one side of the fold (the trailing side, which flips in right-to-left). The section 1 grep for `padding\(\.bottom` and `overlay\(alignment: *\.bottom` finds them.
 - **Verify:** trigger every toast on the cover tall and turned, with a Live Activity running, open wide, partly open and in Split View left: capture, no overlap with the column, the camera corner or the Island, nothing on the band.
 - **Source:** HIG (controls on the side include "the Dynamic Island, the status bar, the toolbar ... and the tab bar"; full width is fine "as long as nothing conflicts with the Dynamic Island or the status bar"); RR (occlusion kind, fetched); LAB1015 20:26-20:41.
 
@@ -350,6 +352,14 @@ Areas: [Lifecycle and scenes](#lifecycle-and-scenes) · [Layout](#layout) · [Ba
 - **Fix:** pick the style for what lies under the column on that screen, not the top band; call `setNeedsStatusBarAppearanceUpdate()` when it should change (as the reference page says); keep content behind the column tonally consistent or give it a scroll-edge treatment (E-BARS-1); where `toolbarVerticalEdge` is nil the old rule still holds.
 - **Verify:** cover tall and turned, open wide, light and dark appearance (`xcrun simctl ui <device> appearance dark`, restore after): scroll a light and a dark region under the column and capture; the glyphs stay readable in every frame.
 - **Source:** `preferredStatusBarStyle` reference (fetched 2026-10-23, nothing Duo-specific); HIG (status bar in the side column); LAB0916 30:27; LAB1015 21:24-21:44.
+
+### E-BARS-12. A hidden navigation bar with a hand-drawn header `[General]` (trial)
+- **Case:** a SwiftUI screen inside a `NavigationStack` that hides the system bar (`.toolbar(.hidden, for: .navigationBar)`, `navigationBarHidden(true)`) and draws its own header with an action button, often on every tab root.
+- **Breaks:** the header's buttons never reach the side column (only container-owned bar items do), so the cover and the open Duo held wide show a horizontal action beside a vertical tab bar. The section 1 bar greps look for `UIToolbar`, `UINavigationBar(` and `TabView`, so this pattern produced no hit (four of four tab roots in the trial app).
+- **Detect:** `rg -n -e 'toolbar\(\.hidden, *for: *\.navigationBar' -e 'navigationBarHidden\(true' -e 'toolbarVisibility\(\.hidden'`, then read the header for `Button`s.
+- **Fix:** declare the action as a `ToolbarItem` with a symbol and a title; show the navigation bar only where `toolbarVerticalEdge` is non-nil (it takes no title space there, though SwiftUI added 11 to 15 pt at the top, see T4); hide the header's own button there; keep the hidden bar and the header button where the edge is nil, so other iPhones do not change. Swap only visibility on the edge, never identity (T15).
+- **Verify:** cover and open wide: the action sits in the column under the status bar and the header shows no duplicate; open tall and a 27.0 iPhone: pixel-identical to before.
+- **Source:** trial on a second SwiftUI app, 2026-10-24 (Xcode 27.1, iOS 27.1 simulator); PREP and TT462 for which bars go vertical.
 
 ---
 
