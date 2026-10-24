@@ -47,7 +47,7 @@ Every `xcrun simctl` and `xcodebuild` form below was checked against `xcrun simc
    }
    #endif
    ```
-   Read it with `xcrun simctl launch --console <UDID> <bundle id>` (blocks and prints the app's stdout and stderr) or `--stdout=<file>`. If you cannot change the app, read sizes from screenshots instead (pixels divided by 3 on the Duo: cover 1398 x 2034 px is 466 x 678 pt).
+   Read it with `xcrun simctl launch --console-pty <UDID> <bundle id>` (blocks and prints the app's output). Plain `--console` pipes stdout, which is block-buffered, so `print` lines can stay unwritten until the app exits: in one trial `--console` printed nothing while `--console-pty`, or `SIMCTL_CHILD_NSUnbufferedIO=YES` with `--console`, printed every line. Stopping the console session also stops the app, so capture screenshots before you end it. If you cannot change the app, read sizes from screenshots instead (pixels divided by 3 on the Duo: cover 1398 x 2034 px is 466 x 678 pt).
 8. **Build, install, launch (the baseline).** On a clean checkout of the fresh app, note the commit, current deployment target, the Xcode the app last shipped with, and the lifecycle. Then build it unchanged with 27.1:
    ```bash
    UDID=<duo udid>; SCRATCH=<run folder>
@@ -98,6 +98,8 @@ Device Hub buttons give six poses: Closed, Partially Open, Open, each in the def
 | 6 | Open tall | Open, after Rotate Right | 3 | 669 x 951; views right of 466 and below 678 render; paywall plans, price, terms and Restore visible (E-LAYOUT-9, E-STORE-10) |
 
 The six button poses do not include tabletop (laptop) or tent. Those need Device Hub's continuous hinge and 3D rotation controls (`verification.md`), which no script drives; do at least one tabletop check by hand for apps with media or games, and record it as a separate row.
+
+Run every transition with the app already on screen, not only fresh launches in each pose. In one trial, captures made by launching the app in each pose all looked right, and the first unfold with the app open left a layout computed for the cover in place (the page slid off the left edge).
 
 Then, per critical flow (sign-in, onboarding, main list and detail, editor or composer, paywall and Restore, settings, any camera, playback or game screen):
 

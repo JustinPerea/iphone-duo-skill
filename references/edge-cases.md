@@ -222,7 +222,7 @@ Areas: [Lifecycle and scenes](#lifecycle-and-scenes) · [Layout](#layout) · [Ba
 ### E-LAYOUT-10. Hard-coded display-hugging corners `[General]` (L21)
 - **Case:** full-bleed cards, previews or sheets with a fixed large radius, or the private `_displayCornerRadius` key.
 - **Breaks:** the outer display's corners away from the hinge are rounder, with corners in new places; one radius clips or leaves uneven gaps. (What the private key returns on a Duo is unverified.)
-- **Detect:** `rg -n -e '_displayCornerRadius' -e 'cornerRadius: *[3-6][0-9]' -e 'layer.cornerRadius *= *[3-6][0-9]'`.
+- **Detect:** `rg -n -e '_displayCornerRadius' -e 'cornerRadius: *[3-6][0-9]' -e 'layer.cornerRadius *= *[3-6][0-9]' -e 'static let .*[Rr]adius.*= *[3-6][0-9]'`, then follow radius tokens to the full-bleed views that use them.
 - **Fix:** `ConcentricRectangle` / `UICornerConfiguration` (iOS 26); corner-adapted safe area near corners (T5).
 - **Verify:** `simctl io ... screenshot --mask=alpha` or Device Hub window captures on the cover both orientations and open: equal inset per corner.
 - **Source:** TT461 4:19-4:34; LAB0917 41:54-42:12; Duo capabilities.plist corner radii.
@@ -398,7 +398,7 @@ Areas: [Lifecycle and scenes](#lifecycle-and-scenes) · [Layout](#layout) · [Ba
 ### E-PRES-6. Two Close buttons `[General; seen in a shipping app (Mitamaton)]` (D20)
 - **Case:** the detail moves in-tree, the column gains Close, and the view's corner X is still drawn.
 - **Breaks:** two X buttons for one action (both read "Close"); hiding the X breaks UI tests that tap the X identifier on the Duo.
-- **Detect:** `rg -n 'systemName: "xmark"'` in views that can draw in-tree; your X identifier in Tests/.
+- **Detect:** `rg -n -e 'system(Name|Image): *"xmark' -e 'Label\("Close"' -e 'Button\("(Close|Cancel|Done)"'` in views that can draw in-tree (SwiftUI's `Button(_:systemImage:)` spells it `systemImage:`); your X identifier in the test targets. Count Close controls per presented view, not per file.
 - **Fix:** hide the view's X when in-tree and the column owns Close (an environment flag from the presenter); keep it on page sheets; UI tests resolve the X to the column's Close when absent.
 - **Verify:** one X on cover and open Duo; iPhone sheet keeps its X; smoke tests pass on both.
 - **Source:** case study section 16.
@@ -518,7 +518,7 @@ Areas: [Lifecycle and scenes](#lifecycle-and-scenes) · [Layout](#layout) · [Ba
 ### E-A11Y-4. Dynamic Type caps on wide reading surfaces `[General; seen in a shipping app (Mitamaton)]` (D32)
 - **Case:** `dynamicTypeSize(...xxLarge)`, `Font.custom(_, size:)` without `relativeTo:`, or a two-step ladder on detail, reader and editor text.
 - **Breaks:** AX sizes stay small across 951 pt where Apple says large sizes look best (opened); a Larger Text claim on the Accessibility Nutrition Label becomes false. (Mitamaton: capped at xxLarge.)
-- **Detect:** `rg -n -e 'dynamicTypeSize\(\.\.\.' -e 'Font\.custom\([^)]*size:'` and look for missing `relativeTo:`.
+- **Detect:** `rg -n -e 'dynamicTypeSize\(\.\.\.' -e 'Font\.custom\([^)]*size:' -e '\.system\(size:' -e 'min\([^)]*[Ss]caled' -e '@ScaledMetric'` and look for missing `relativeTo:` and capped scaled metrics; classify each hit as reading text or as titles and icons.
 - **Fix:** let detail, reader and editor text scale (`.custom(face, size:, relativeTo: .body)`); cap line length with the readable content guide; keep fixed ladders only on dense cards.
 - **Verify:** AX5 captures on the open Duo and a 390 pt iPhone, with a truncation oracle where available.
 - **Source:** LAB0916 29:14-29:42; case study section 16.
@@ -610,7 +610,7 @@ Areas: [Lifecycle and scenes](#lifecycle-and-scenes) · [Layout](#layout) · [Ba
 ### E-ARCH-9. Maps `[General]` (A25)
 - **Case:** selected pin or user location centred on the map; full-width bottom sheet; custom map buttons in fixed corners.
 - **Breaks:** held wide and partly open, the map centre is the band (fold mid 475.5 pt; inferred from geometry); a default sheet covers the open map; buttons under the column or camera occlusion.
-- **Detect:** `rg -n -e 'MKMapView' -e 'Map\(' -e 'setCenter' -e 'setRegion' -e 'MapCameraPosition' -e 'safeAreaPadding'`.
+- **Detect:** `rg -n -e 'MKMapView' -e '\bMap\(' -e 'import MapKit' -e 'setCenter' -e 'setRegion' -e 'MapCameraPosition' -e 'safeAreaPadding'` (a bare `Map\(` also matches `flatMap(` and `compactMap(`).
 - **Fix:** offset the focus point into a half (`MKMapView.layoutMargins`, SwiftUI `.safeAreaPadding`); `presentationPlacement(.leading)` sheets (Maps, Find My); system map controls.
 - **Verify:** select a pin partly open held wide: lands in a half; open Duo and closed landscape: leading sheet, map visible.
 - **Source:** LAB0917 47:29-48:14; LAB0916 33:30; RR.
@@ -734,8 +734,8 @@ Areas: [Lifecycle and scenes](#lifecycle-and-scenes) · [Layout](#layout) · [Ba
 ### E-TEST-12. Element lookup on the Duo `[General; seen in a shipping app (Mitamaton)]` (D12, D24, T25)
 - **Case:** side-column tab items are plain buttons in generic containers, not a tab bar; a detail has two Closes; an identifier on a plain stack is handed to every child; a `.contain` nested in another `.contain` is flattened with its identifier; an identifier after a `safeAreaBar` modifier appeared to attach to the bar (inferred; hierarchy not captured); drags from an element centre under a band start in the bar.
 - **Breaks:** `app.tabBars` is empty on the Duo; wrong Close or "multiple matches"; `firstMatch` returns a 24 pt icon; child ids vanish; a drag "on the board" opened another screen.
-- **Detect:** `rg -n -F 'app.tabBars' Tests/`; label-only queries ("Close", "Done"); identifiers on stacks; drags near the top edge.
-- **Fix:** helper trying `app.tabBars.buttons[name]` then `app.buttons[name]`; unique identifiers on leaf controls and toolbar item content; `.accessibilityElement(children: .contain)` before a container's identifier, not nested; scroll-view identifiers before bar modifiers; drags from an explicit coordinate below the band; assert match counts.
+- **Detect:** `rg -n -F 'app.tabBars'` over the UI-test targets (take the folders from `xcodebuild -list`; they are not always `Tests/`); label-only queries ("Close", "Done"); identifiers on stacks; drags near the top edge. Also tests that use the tab bar as a geometry line, such as `app.tabBars.firstMatch.frame.minY` as the edge content must stay above: with the tabs in the column the tab bar does not exist, its frame is zero, and every scroll-until-above loop fails (trial, 2026-10-24).
+- **Fix:** helper trying `app.tabBars.buttons[name]` then `app.buttons[name]`; a second helper for the bottom edge that falls back to `app.windows.firstMatch.frame.maxY` when there is no tab bar; unique identifiers on leaf controls and toolbar item content; `.accessibilityElement(children: .contain)` before a container's identifier, not nested; scroll-view identifiers before bar modifiers; drags from an explicit coordinate below the band; assert match counts.
 - **Verify:** dump `app.debugDescription` at the state; the same tests pass on the cover, open Duo and a 27.0 iPhone.
 - **Source:** case study section 14.
 
@@ -774,7 +774,7 @@ Areas: [Lifecycle and scenes](#lifecycle-and-scenes) · [Layout](#layout) · [Ba
 ### E-TEST-17. Display ids and `XCUIScreen` identity `[General]` (T12)
 - **Case:** profile displays: 1 (cover), 3 (inner, native orientation 270), plus 2 TVOut, 4 CarPlay, 5 Resizable. `XCUIScreen.screens` exposes no id; the first entry is the main screen (the cover).
 - **Breaks:** hard-coded ids unverified; picking `XCUIScreen.screens[1]` by index; comparing 2853 x 2007 with a 2007 x 2853 baseline.
-- **Detect:** `rg -n -e '--display=' -e 'XCUIScreen.screens\['`.
+- **Detect:** `rg -n -e '--display=' -e 'XCUIScreen.screens\[' -e 'XCUIScreen\.main'`, plus any `simctl io ... screenshot` without `--display` (it captures the cover). `XCUIScreen.main.screenshot()` is the cover and is black while open; `XCUIApplication().screenshot()` captured the app's own display in one trial.
 - **Fix:** `xcrun simctl io <UDID> enumerate` once per session (confirm names such as LCD and LCD-1 there); identify XCUIScreen entries by pixel size (1398 x 2034 cover, 2006 x 2852 inner); normalise rotation before diffing.
 - **Verify:** enumerate output logged beside captures.
 - **Source:** `simctl io` help; Duo capabilities.plist; XCUIScreen.h.
